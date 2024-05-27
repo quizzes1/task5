@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "sdl.h": "c",
+        "stdio.h": "c",
+        "allheaders.h": "c",
+        "math.h": "c",
+        "ball.h": "c",
+        "racket.h": "c",
+        "insertion_sort.h": "c",
+        "bricks.h": "c",
+        "widgets.h": "c",
+        "sdl_ttf.h": "c",
+        "bonuses.h": "c",
+        "sdl_image.h": "c",
+        "cstdint": "c",
+        "buttons.h": "c",
+        "sdl2_gfxprimitives.h": "c"
+    }
+}
