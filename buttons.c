@@ -13,6 +13,7 @@ button initialize_button(SDL_Renderer * renderer, char *name, point coordinates)
         printf("Cannot download font on button!");
         exit(0);
     }
+
     initializing_button.main_col.a = SDL_ALPHA_OPAQUE;
     initializing_button.main_col.r = 255;
     initializing_button.main_col.g = 255;

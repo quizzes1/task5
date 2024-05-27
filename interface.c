@@ -5,20 +5,32 @@
 #include "headers/buttons.h"
 #include "headers/interface.h"
 
-void initialize_working_zone(SDL_Renderer * renderer, work_zone * initializing_working_zone){
+int colours_list[9][3] = {
+    {0, 0, 0},
+    {0, 0, 255},
+    {0, 255, 0},
+    {255, 165, 0},
+    {255, 20, 147},
+    {148, 0, 211},
+    {255, 0, 0},
+    {255, 255, 255},
+    {255, 255, 0}};
+
+void initialize_working_zone(SDL_Renderer *renderer, work_zone *initializing_working_zone)
+{
     initializing_working_zone->drect.x = 0;
     initializing_working_zone->drect.y = 100;
     initializing_working_zone->drect.w = SCREEN_WIDTH;
-    initializing_working_zone->drect.h = SCREEN_HEIGHT;
+    initializing_working_zone->drect.h = SCREEN_HEIGHT - 100; // Обновление высоты рабочей зоны
 
-    SDL_Surface *surface = SDL_CreateRGBSurface(0, 200, 150, 32, 0, 0, 0, 0);
+    SDL_Surface *surface = SDL_CreateRGBSurface(0, initializing_working_zone->drect.w, initializing_working_zone->drect.h, 32, 0, 0, 0, 0);
     SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 255, 255, 255));
     initializing_working_zone->texture = SDL_CreateTextureFromSurface(renderer, surface);
+    SDL_FreeSurface(surface); // Освобождение поверхности после создания текстуры
 }
 
-
-
-void interface(SDL_Renderer * renderer, SDL_Window * window){
+void interface(SDL_Renderer *renderer, SDL_Window *window)
+{
     SDL_Event window_event;
     point button_coordinates;
     button_coordinates.x = 10;
@@ -38,7 +50,7 @@ void interface(SDL_Renderer * renderer, SDL_Window * window){
     button rectangle_button = initialize_image_button(renderer, "fonts_and_images/rectangle.png", button_coordinates, 48, 48);
 
     button_coordinates.x = brush_button.drect.x;
-    button_coordinates.y = brush_button.drect.y+50;
+    button_coordinates.y = brush_button.drect.y + 50;
     button button_brush_1px = initialize_button_pxls(renderer, "1px", button_coordinates);
     button_coordinates.x += 55;
     button button_brush_2px = initialize_button_pxls(renderer, "2px", button_coordinates);
@@ -46,7 +58,7 @@ void interface(SDL_Renderer * renderer, SDL_Window * window){
     button button_brush_3px = initialize_button_pxls(renderer, "3px", button_coordinates);
 
     button_coordinates.x = eraser_button.drect.x;
-    button_coordinates.y = brush_button.drect.y+50;
+    button_coordinates.y = brush_button.drect.y + 50;
     button button_eraser_1px = initialize_button_pxls(renderer, "1px", button_coordinates);
     button_coordinates.x += 55;
     button button_eraser_2px = initialize_button_pxls(renderer, "2px", button_coordinates);
@@ -54,7 +66,7 @@ void interface(SDL_Renderer * renderer, SDL_Window * window){
     button button_eraser_3px = initialize_button_pxls(renderer, "3px", button_coordinates);
 
     button_coordinates.x = palette_button.drect.x;
-    button_coordinates.y = palette_button.drect.y+50;
+    button_coordinates.y = palette_button.drect.y + 50;
 
     button button_palette_black = initialize_image_button(renderer, "fonts_and_images/black.png", button_coordinates, 32, 32);
     button_coordinates.x += 45;
@@ -77,12 +89,24 @@ void interface(SDL_Renderer * renderer, SDL_Window * window){
     work_zone working_zone;
     initialize_working_zone(renderer, &working_zone);
 
+    colour_type colour_selected = BLACK;
     tool_type tool_menu_selected = NOTHING;
     tool_type tool_selected = BRUSH;
+    int brush_size = 1;
 
-    bool is_drawing = false; 
+    bool is_drawing = false;
+    bool is_up = false;
 
-    while(true){   
+    SDL_Texture *drawing_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, working_zone.drect.w, working_zone.drect.h);
+    SDL_SetRenderTarget(renderer, drawing_texture);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    SDL_RenderClear(renderer);
+    SDL_SetRenderTarget(renderer, NULL);
+
+    Uint32 last_button_up_time = 0;
+
+    while (true)
+    {
         SDL_Rect mouse_point;
         mouse_point.h = 1;
         mouse_point.w = 1;
@@ -103,9 +127,12 @@ void interface(SDL_Renderer * renderer, SDL_Window * window){
         draw_image_button(renderer, &circle_button);
         draw_image_button(renderer, &rectangle_button);
         draw_image_button(renderer, &line_button);
-        SDL_RenderCopy(renderer, working_zone.texture, NULL, &working_zone.drect); 
 
-        if( tool_menu_selected == BRUSH){
+        SDL_RenderCopy(renderer, working_zone.texture, NULL, &working_zone.drect);
+        SDL_RenderCopy(renderer, drawing_texture, NULL, &working_zone.drect);
+
+        if (tool_menu_selected == BRUSH)
+        {
             button_brush_1px = update_button(renderer, button_brush_1px, mouse_point);
             button_brush_2px = update_button(renderer, button_brush_2px, mouse_point);
             button_brush_3px = update_button(renderer, button_brush_3px, mouse_point);
@@ -114,7 +141,8 @@ void interface(SDL_Renderer * renderer, SDL_Window * window){
             draw_button(&button_brush_2px, renderer);
             draw_button(&button_brush_3px, renderer);
         }
-        if( tool_menu_selected == ERASER ){
+        if (tool_menu_selected == ERASER)
+        {
             button_eraser_1px = update_button(renderer, button_eraser_1px, mouse_point);
             button_eraser_2px = update_button(renderer, button_eraser_2px, mouse_point);
             button_eraser_3px = update_button(renderer, button_eraser_3px, mouse_point);
@@ -123,7 +151,8 @@ void interface(SDL_Renderer * renderer, SDL_Window * window){
             draw_button(&button_eraser_2px, renderer);
             draw_button(&button_eraser_3px, renderer);
         }
-        if( tool_menu_selected == PALETTE){
+        if (tool_menu_selected == PALETTE)
+        {
             update_image_button(renderer, &button_palette_black, &mouse_point);
             update_image_button(renderer, &button_palette_blue, &mouse_point);
             update_image_button(renderer, &button_palette_green, &mouse_point);
@@ -145,73 +174,173 @@ void interface(SDL_Renderer * renderer, SDL_Window * window){
             draw_image_button(renderer, &button_palette_yellow);
         }
 
-        if(SDL_PollEvent(&window_event)){
-            if(window_event.type == SDL_QUIT){
+        if (SDL_PollEvent(&window_event))
+        {
+            if (window_event.type == SDL_QUIT)
+            {
                 break;
             }
-            if(window_event.type == SDL_MOUSEBUTTONDOWN){
+
+            if (window_event.type == SDL_MOUSEBUTTONDOWN)
+            {
+                last_button_up_time = 0;
+                is_up = false;
                 is_drawing = true;
+                SDL_SetRenderTarget(renderer, drawing_texture);
+                filledCircleRGBA(renderer, mouse_point.x - working_zone.drect.x, mouse_point.y - working_zone.drect.y, brush_size, 0, 0, 0, SDL_ALPHA_OPAQUE);
+                SDL_SetRenderTarget(renderer, NULL);
             }
-            if(window_event.type == SDL_MOUSEBUTTONUP){
-                is_drawing = false;
-                if(window_event.button.button == SDL_BUTTON_LEFT && brush_button.is_selected == true){
-                
-                    if (tool_menu_selected == BRUSH) {
+            if (window_event.type == SDL_MOUSEBUTTONUP)
+            {
+                is_up = true;
+
+                if (window_event.button.button == SDL_BUTTON_LEFT && brush_button.is_selected == true)
+                {
+                    if (tool_menu_selected == BRUSH)
+                    {
                         tool_menu_selected = NOTHING;
                     }
-                    else{
+                    else
+                    {
                         tool_menu_selected = BRUSH;
                     }
-                    
                 }
-                else if(window_event.button.button == SDL_BUTTON_LEFT && eraser_button.is_selected == true){
-                    if(tool_menu_selected == ERASER){
+                else if (window_event.button.button == SDL_BUTTON_LEFT && eraser_button.is_selected == true)
+                {
+                    if (tool_menu_selected == ERASER)
+                    {
                         tool_menu_selected = NOTHING;
                     }
-                    else{
+                    else
+                    {
                         tool_menu_selected = ERASER;
                     }
                 }
-                else if(window_event.button.button == SDL_BUTTON_LEFT && circle_button.is_selected == true){
+                else if (window_event.button.button == SDL_BUTTON_LEFT && circle_button.is_selected == true)
+                {
                     printf("circle\n");
                 }
-                else if(window_event.button.button == SDL_BUTTON_LEFT && filling_button.is_selected == true){
+                else if (window_event.button.button == SDL_BUTTON_LEFT && filling_button.is_selected == true)
+                {
                     printf("filling\n");
                 }
-                else if(window_event.button.button == SDL_BUTTON_LEFT && palette_button.is_selected == true){
-                    if(tool_menu_selected == PALETTE){
+                else if (window_event.button.button == SDL_BUTTON_LEFT && palette_button.is_selected == true)
+                {
+                    if (tool_menu_selected == PALETTE)
+                    {
                         tool_menu_selected = NOTHING;
                     }
-                    else {
+                    else
+                    {
                         tool_menu_selected = PALETTE;
                     }
                 }
-                else if(window_event.button.button == SDL_BUTTON_LEFT && rectangle_button.is_selected == true){
+                else if (window_event.button.button == SDL_BUTTON_LEFT && rectangle_button.is_selected == true)
+                {
                     printf("rectangle\n");
                 }
-                else if(window_event.button.button == SDL_BUTTON_LEFT && line_button.is_selected == true){
+                else if (window_event.button.button == SDL_BUTTON_LEFT && line_button.is_selected == true)
+                {
                     printf("line\n");
                 }
-                else if(window_event.button.button == SDL_BUTTON_LEFT && button_brush_1px.is_selected == true){
-                    printf("1px\n");
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_brush_1px.is_selected == true)
+                {
+                    brush_size = 1;
                 }
-                else if(window_event.button.button == SDL_BUTTON_LEFT && button_brush_2px.is_selected == true){
-                    printf("2px\n");
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_brush_2px.is_selected == true)
+                {
+                    brush_size = 2;
                 }
-                else if(window_event.button.button == SDL_BUTTON_LEFT && button_brush_3px.is_selected == true){
-                    printf("3px\n");
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_brush_3px.is_selected == true)
+                {
+                    brush_size = 3;
                 }
-
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_eraser_1px.is_selected == true)
+                {
+                    colour_selected = WHITE;
+                    brush_size = 1;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_eraser_2px.is_selected == true)
+                {
+                    colour_selected = WHITE;
+                    brush_size = 2;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_eraser_3px.is_selected == true)
+                {
+                    colour_selected = WHITE;
+                    brush_size = 3;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_palette_black.is_selected == true)
+                {
+                    colour_selected = BLACK;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_palette_blue.is_selected == true)
+                {
+                    colour_selected = BLUE;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_palette_green.is_selected == true)
+                {
+                    colour_selected = GREEN;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_palette_red.is_selected == true)
+                {
+                    colour_selected = RED;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_palette_white.is_selected == true)
+                {
+                    colour_selected = WHITE;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_palette_yellow.is_selected == true)
+                {
+                    colour_selected = YELLOW;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_palette_orange.is_selected == true)
+                {
+                    colour_selected = ORANGE;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_palette_pink.is_selected == true)
+                {
+                    colour_selected = PINK;
+                }
+                else if (window_event.button.button == SDL_BUTTON_LEFT && button_palette_purple.is_selected == true)
+                {
+                    colour_selected = PURPLE;
+                }
             }
-            if (window_event.type == SDL_MOUSEMOTION){
-                if(is_drawing){
-                    // filledCircleRGBA(renderer, mouse_point.x, mouse_point.y, 1, 0, 0, 0, SDL_ALPHA_OPAQUE);
+            if (window_event.type == SDL_MOUSEMOTION)
+            {
+                if (is_drawing)
+                {
+                    SDL_SetRenderTarget(renderer, drawing_texture);
+                    filledCircleRGBA(renderer, mouse_point.x - working_zone.drect.x, mouse_point.y - working_zone.drect.y, brush_size * 2, colours_list[colour_selected][0], colours_list[colour_selected][1], colours_list[colour_selected][2], SDL_ALPHA_OPAQUE);
+                    SDL_SetRenderTarget(renderer, NULL);
                 }
             }
-            
         }
+
+        if (is_drawing && is_up)
+        {
+            if (last_button_up_time == 0)
+            {
+                last_button_up_time = SDL_GetTicks();
+            }
+
+            if (SDL_GetTicks() - last_button_up_time > 50)
+            {
+                is_drawing = false;
+                is_up = false;
+                last_button_up_time = 0;
+            }
+        }
+
+        SDL_SetRenderDrawColor(renderer, 85, 85, 255, SDL_ALPHA_OPAQUE);
         SDL_RenderPresent(renderer);
-        SDL_RenderClear(renderer);
+
+        if (!is_drawing)
+        {
+            SDL_RenderClear(renderer);
+        }
     }
 
+    SDL_DestroyTexture(drawing_texture);
 }

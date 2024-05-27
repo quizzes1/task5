@@ -61,6 +61,7 @@ int main(int argc, char *argv[]){
                 if(window_event.button.button == SDL_BUTTON_LEFT){
                     if(new_file_button.is_selected == true){
                         interface(renderer, window);
+                        SDL_SetRenderDrawColor(renderer, 85, 85, 255, SDL_ALPHA_OPAQUE);
                     }
                     else if(exit_button.is_selected == true){
                         break;
