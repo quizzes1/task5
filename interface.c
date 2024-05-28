@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL2_gfxPrimitives.h>
+#include <SDL2/SDL2_rotozoom.h>
 #include "headers/allheaders.h"
 #include "headers/buttons.h"
 #include "headers/interface.h"
@@ -16,6 +17,7 @@ int colours_list[9][3] = {
     {255, 0, 0},
     {255, 255, 255},
     {255, 255, 0}};
+
 
 void initialize_working_zone(SDL_Renderer *renderer, work_zone *initializing_working_zone, int flag)
 {
@@ -106,9 +108,9 @@ void interface(SDL_Renderer *renderer, SDL_Window *window, int flag)
 
     bool is_drawing = false;
     bool is_up = false;
-    
-    // SDL_Texture *drawing_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, working_zone.drect.w, working_zone.drect.h);
-    SDL_Texture *drawing_texture = open_image(renderer);
+    int a = SDL_PIXELFORMAT_RGBA8888;
+    int b = SDL_TEXTUREACCESS_TARGET;
+    SDL_Texture *drawing_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, working_zone.drect.w, working_zone.drect.h);
     SDL_Texture *tmp_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, working_zone.drect.w, working_zone.drect.h);
     SDL_SetRenderTarget(renderer, drawing_texture);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -117,8 +119,9 @@ void interface(SDL_Renderer *renderer, SDL_Window *window, int flag)
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, NULL);
-    SDL_SetTextureBlendMode(drawing_texture, SDL_BLENDMODE_BLEND);
-
+    SDL_SetTextureBlendMode(drawing_texture, SDL_BLENDMODE_MUL);
+    SDL_SetTextureBlendMode(working_zone.texture, SDL_BLENDMODE_MUL);
+    SDL_Rect main_win = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
 
     Uint32 last_button_up_time = 0;
 
@@ -127,7 +130,7 @@ void interface(SDL_Renderer *renderer, SDL_Window *window, int flag)
 
     while (true)
     {
-        SDL_SetTextureBlendMode(drawing_texture, SDL_BLENDMODE_MUL);
+
         SDL_Rect mouse_point;
         mouse_point.h = 1;
         mouse_point.w = 1;
@@ -152,9 +155,9 @@ void interface(SDL_Renderer *renderer, SDL_Window *window, int flag)
         draw_image_button(renderer, &rectangle_button);
         draw_image_button(renderer, &line_button);
 
-        SDL_RenderCopy(renderer, working_zone.texture, NULL, &working_zone.drect);
         SDL_RenderCopy(renderer, tmp_texture, NULL, &working_zone.drect);
         SDL_RenderCopy(renderer, drawing_texture, NULL, &working_zone.drect);
+        SDL_RenderCopy(renderer, working_zone.texture, NULL, &working_zone.drect);
 
         if (tool_menu_selected == BRUSH)
         {
@@ -208,6 +211,7 @@ void interface(SDL_Renderer *renderer, SDL_Window *window, int flag)
 
             if (window_event.type == SDL_MOUSEBUTTONDOWN)
             {
+
                 last_button_up_time = 0;
                 is_up = false;
                 is_drawing = true;
