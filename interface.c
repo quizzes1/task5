@@ -4,6 +4,7 @@
 #include "headers/allheaders.h"
 #include "headers/buttons.h"
 #include "headers/interface.h"
+#include "headers/filework.h"
 
 int colours_list[9][3] = {
     {0, 0, 0},
@@ -16,55 +17,24 @@ int colours_list[9][3] = {
     {255, 255, 255},
     {255, 255, 0}};
 
-void initialize_working_zone(SDL_Renderer *renderer, work_zone *initializing_working_zone)
+void initialize_working_zone(SDL_Renderer *renderer, work_zone *initializing_working_zone, int flag)
 {
     initializing_working_zone->drect.x = 0;
     initializing_working_zone->drect.y = 100;
     initializing_working_zone->drect.w = SCREEN_WIDTH;
     initializing_working_zone->drect.h = SCREEN_HEIGHT - 100;
-
-    SDL_Surface *surface = SDL_CreateRGBSurface(0, initializing_working_zone->drect.w, initializing_working_zone->drect.h, 32, 0, 0, 0, 0);
-    SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 255, 255, 255));
-    initializing_working_zone->texture = SDL_CreateTextureFromSurface(renderer, surface);
-    SDL_FreeSurface(surface); 
+    if(flag == 0){  
+        SDL_Surface *surface = SDL_CreateRGBSurface(0, initializing_working_zone->drect.w, initializing_working_zone->drect.h, 32, 0, 0, 0, 0);
+        SDL_FillRect(surface, NULL, SDL_MapRGB(surface->format, 255, 255, 255));
+        initializing_working_zone->texture = SDL_CreateTextureFromSurface(renderer, surface);
+        SDL_FreeSurface(surface); 
+    }
+    else {
+        initializing_working_zone->texture = open_image(renderer);
+    }
 }
 
-void save_image(SDL_Renderer *renderer, const char *filename) {
-    SDL_Surface *save_surface = NULL;
-    SDL_Surface *infoSurface = SDL_GetWindowSurface(SDL_GetWindowFromID(1));
-    if (infoSurface == NULL) {
-        printf("Couldn't create surface from window: %s\n", SDL_GetError());
-        return;
-    }
-    unsigned char *pixels = (unsigned char *)malloc(infoSurface->w * infoSurface->h * infoSurface->format->BytesPerPixel);
-    if (pixels == 0) {
-        printf("Couldn't allocate memory for pixels: %s\n", SDL_GetError());
-        return;
-    }
-
-    if (SDL_RenderReadPixels(renderer, NULL, infoSurface->format->format, pixels, infoSurface->w * infoSurface->format->BytesPerPixel) != 0) {
-        printf("Couldn't read pixels from renderer: %s\n", SDL_GetError());
-        free(pixels);
-        return;
-    }
-
-    save_surface = SDL_CreateRGBSurfaceFrom(pixels, infoSurface->w, infoSurface->h, infoSurface->format->BitsPerPixel, infoSurface->w * infoSurface->format->BytesPerPixel, infoSurface->format->Rmask, infoSurface->format->Gmask, infoSurface->format->Bmask, infoSurface->format->Amask);
-    if (save_surface == NULL) {
-        printf("Couldn't create surface: %s\n", SDL_GetError());
-        free(pixels);
-        return;
-    }
-
-    if (SDL_SaveBMP(save_surface, filename) != 0) {
-        printf("Couldn't save BMP: %s\n", SDL_GetError());
-    }
-
-    SDL_FreeSurface(save_surface);
-    free(pixels);
-}
-
-
-void interface(SDL_Renderer *renderer, SDL_Window *window)
+void interface(SDL_Renderer *renderer, SDL_Window *window, int flag)
 {
     
 
@@ -127,7 +97,7 @@ void interface(SDL_Renderer *renderer, SDL_Window *window)
     button button_palette_yellow = initialize_image_button(renderer, "fonts_and_images/yellow.png", button_coordinates, 32, 32);
 
     work_zone working_zone;
-    initialize_working_zone(renderer, &working_zone);
+    initialize_working_zone(renderer, &working_zone, flag);
 
     colour_type colour_selected = BLACK;
     tool_type tool_selected = BRUSH;
@@ -136,8 +106,9 @@ void interface(SDL_Renderer *renderer, SDL_Window *window)
 
     bool is_drawing = false;
     bool is_up = false;
-
-    SDL_Texture *drawing_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, working_zone.drect.w, working_zone.drect.h);
+    
+    // SDL_Texture *drawing_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, working_zone.drect.w, working_zone.drect.h);
+    SDL_Texture *drawing_texture = open_image(renderer);
     SDL_Texture *tmp_texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, working_zone.drect.w, working_zone.drect.h);
     SDL_SetRenderTarget(renderer, drawing_texture);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
@@ -146,18 +117,17 @@ void interface(SDL_Renderer *renderer, SDL_Window *window)
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderClear(renderer);
     SDL_SetRenderTarget(renderer, NULL);
-
     SDL_SetTextureBlendMode(drawing_texture, SDL_BLENDMODE_BLEND);
+
 
     Uint32 last_button_up_time = 0;
 
     int mouse_start_x = 0, mouse_start_y = 0;
+    int radius = 0;
 
     while (true)
     {
-        // SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-        // SDL_SetTextureAlphaMod(tmp_texture, 100);
-        SDL_SetTextureAlphaMod(drawing_texture, 20);
+        SDL_SetTextureBlendMode(drawing_texture, SDL_BLENDMODE_MUL);
         SDL_Rect mouse_point;
         mouse_point.h = 1;
         mouse_point.w = 1;
@@ -243,6 +213,7 @@ void interface(SDL_Renderer *renderer, SDL_Window *window)
                 is_drawing = true;
                 mouse_start_x = mouse_point.x;
                 mouse_start_y = mouse_point.y;
+
                 if(tool_selected == BRUSH){
                     SDL_SetRenderTarget(renderer, drawing_texture);
                     filledCircleRGBA(renderer, mouse_point.x - working_zone.drect.x, mouse_point.y - working_zone.drect.y, brush_size, colours_list[colour_selected][0], colours_list[colour_selected][1], colours_list[colour_selected][3], SDL_ALPHA_OPAQUE);
@@ -253,6 +224,7 @@ void interface(SDL_Renderer *renderer, SDL_Window *window)
             if (window_event.type == SDL_MOUSEBUTTONUP)
             {
                 is_up = true;
+
                 if(window_event.button.button == SDL_BUTTON_LEFT && save_button.is_selected == true){
                     save_image(renderer, "saved.bmp");
                 }
@@ -287,7 +259,7 @@ void interface(SDL_Renderer *renderer, SDL_Window *window)
                 }
                 else if (window_event.button.button == SDL_BUTTON_LEFT && filling_button.is_selected == true)
                 {
-                    printf("filling\n");
+                    printf("feeling\n");
                 }
                 else if (window_event.button.button == SDL_BUTTON_LEFT && palette_button.is_selected == true)
                 {
@@ -386,8 +358,26 @@ void interface(SDL_Renderer *renderer, SDL_Window *window)
                         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                         SDL_RenderClear(renderer);
 
-                        int radius = SDL_sqrt(SDL_pow(mouse_start_x - mouse_point.x, 2.0f) + SDL_pow(mouse_start_y - mouse_point.y, 2.0f));
+                        radius = SDL_sqrt(SDL_pow(mouse_start_x - mouse_point.x, 2.0f) + SDL_pow(mouse_start_y - mouse_point.y, 2.0f));
                         circleRGBA(renderer, mouse_point.x - working_zone.drect.x, mouse_point.y - working_zone.drect.y, radius, colours_list[colour_selected][0], colours_list[colour_selected][1], colours_list[colour_selected][2], SDL_ALPHA_OPAQUE);
+                    }
+
+                    if (tool_selected == RECTANGLE)
+                    {
+                        SDL_SetRenderTarget(renderer, tmp_texture);
+                        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                        SDL_RenderClear(renderer);
+
+                        rectangleRGBA(renderer, mouse_start_x - working_zone.drect.x, mouse_start_y- working_zone.drect.y, mouse_point.x - working_zone.drect.x, mouse_point.y- working_zone.drect.y, colours_list[colour_selected][0], colours_list[colour_selected][1], colours_list[colour_selected][2], SDL_ALPHA_OPAQUE);
+                    }
+
+                    if (tool_selected == LINE)
+                    {
+                        SDL_SetRenderTarget(renderer, tmp_texture);
+                        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                        SDL_RenderClear(renderer);
+
+                        lineRGBA(renderer, mouse_start_x - working_zone.drect.x, mouse_start_y - working_zone.drect.y, mouse_point.x - working_zone.drect.x, mouse_point.y - working_zone.drect.y, colours_list[colour_selected][0], colours_list[colour_selected][1], colours_list[colour_selected][2], SDL_ALPHA_OPAQUE);
                     }
 
                     if (tool_selected == BRUSH || tool_selected == ERASER)
@@ -412,6 +402,41 @@ void interface(SDL_Renderer *renderer, SDL_Window *window)
                 is_drawing = false;
                 is_up = false;
                 last_button_up_time = 0;
+
+                if (tool_selected == CIRCLE)
+                {
+                    SDL_SetRenderTarget(renderer, tmp_texture);
+                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                    SDL_RenderClear(renderer);
+
+                    SDL_SetRenderTarget(renderer, drawing_texture);
+
+                    radius = SDL_sqrt(SDL_pow(mouse_start_x - mouse_point.x, 2.0f) + SDL_pow(mouse_start_y - mouse_point.y, 2.0f));
+                    circleRGBA(renderer, mouse_point.x - working_zone.drect.x, mouse_point.y - working_zone.drect.y, radius, colours_list[colour_selected][0], colours_list[colour_selected][1], colours_list[colour_selected][2], SDL_ALPHA_OPAQUE);
+
+                }
+
+                if (tool_selected == RECTANGLE)
+                {
+                    SDL_SetRenderTarget(renderer, tmp_texture);
+                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                    SDL_RenderClear(renderer);
+
+                    SDL_SetRenderTarget(renderer, drawing_texture);
+                    rectangleRGBA(renderer, mouse_start_x - working_zone.drect.x, mouse_start_y - working_zone.drect.y, mouse_point.x - working_zone.drect.x, mouse_point.y - working_zone.drect.y, colours_list[colour_selected][0], colours_list[colour_selected][1], colours_list[colour_selected][2], SDL_ALPHA_OPAQUE);
+                }
+
+                if (tool_selected == LINE)
+                {
+                    SDL_SetRenderTarget(renderer, tmp_texture);
+                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                    SDL_RenderClear(renderer);
+
+                    SDL_SetRenderTarget(renderer, drawing_texture);
+                    lineRGBA(renderer, mouse_start_x - working_zone.drect.x, mouse_start_y - working_zone.drect.y, mouse_point.x - working_zone.drect.x, mouse_point.y - working_zone.drect.y, colours_list[colour_selected][0], colours_list[colour_selected][1], colours_list[colour_selected][2], SDL_ALPHA_OPAQUE);
+                }
+
+                SDL_SetRenderTarget(renderer, NULL);
             }
         }
 
